@@ -1,5 +1,6 @@
 import random
 import re
+import statistics
 import string
 
 five_letter_regex = re.compile(r'^[a-z]{5}$')  # Only match lower-case words
@@ -64,23 +65,32 @@ def filter_possibilities(possibilities, knowledge):
     return [p for p in possibilities if matches_knowledge(knowledge, p)]
 
 
+def best_guess(possibilities):
+    return random.choice(possibilities)  # TODO: Do better than a random guess
+
+
 def solve(target):
     possibilities = five_letter_words.copy()
     knowledge = Knowledge()
     round = 0
     guesses = []
-    while len(possibilities) > 1:
+    solved = False
+    while not solved:
         round += 1
-        guess = random.choice(possibilities)  # TODO: Do better than a random guess
+        guess = best_guess(possibilities)
         guesses.append(guess)
         result = check_match(target, guess)
+        solved = result == [GOOD] * len(target)
         knowledge = new_knowledge(knowledge, guess, result)
         possibilities = filter_possibilities(possibilities, knowledge)
-    return list(possibilities)[0], round, guesses
+    return guesses
 
 
-print(solve('tiger'))
-
-for games in range(100):
+n_guesses = []
+for games in range(1000):
     target = random.choice(five_letter_words)
-    print(solve(target))
+    guesses = solve(target)
+    print(guesses)
+    n_guesses.append(len(guesses))
+
+print(statistics.mean(n_guesses))
