@@ -21,6 +21,12 @@ class Knowledge(object):
         self.letter_in_word = set()
         self.possible_letters = [a_z] * size
 
+    def copy(self):
+        k = Knowledge(len(self.possible_letters))
+        k.letter_in_word = self.letter_in_word.copy()
+        k.possible_letters = [x.copy() for x in self.possible_letters]
+        return k
+
     def __str__(self):
         return f'{self.letter_in_word} + {self.possible_letters}'
 
@@ -39,6 +45,7 @@ def check_match(target, guess):
 
 
 def new_knowledge(knowledge, guess, result):
+    knowledge = knowledge.copy()
     for i in range(len(guess)):
         guess_letter = guess[i]
         if result[i] == GOOD:
@@ -65,8 +72,34 @@ def filter_possibilities(possibilities, knowledge):
     return [p for p in possibilities if matches_knowledge(knowledge, p)]
 
 
-def best_guess(possibilities):
-    return random.choice(possibilities)  # TODO: Do better than a random guess
+def best_guess(possibilities, knowledge):
+    best = ''
+    best_reduction = float('inf')
+    for _ in range(min(len(possibilities), 1000)):
+        guess = random.choice(possibilities)
+
+        outcomes = []
+        possible_targets = random.sample(possibilities, min(len(possibilities), 1000))
+        for possible_target in possible_targets:
+            _, new_possibilities, _ = make_guess(guess,
+                                                 possible_target,
+                                                 possibilities,
+                                                 knowledge)
+            outcomes.append(len(new_possibilities))
+        # TODO - better than mean
+        mean_outcome = statistics.mean(outcomes) / len(possibilities)
+        if mean_outcome < best_reduction:
+            best = guess
+            best_reduction = mean_outcome
+
+    return best
+
+
+def make_guess(guess, target, possibilities, knowledge):
+    result = check_match(target, guess)
+    knowledge = new_knowledge(knowledge, guess, result)
+    possibilities = filter_possibilities(possibilities, knowledge)
+    return result, possibilities, knowledge
 
 
 def solve(target):
@@ -77,20 +110,18 @@ def solve(target):
     solved = False
     while not solved:
         round += 1
-        guess = best_guess(possibilities)
+        guess = best_guess(possibilities, knowledge)
         guesses.append(guess)
-        result = check_match(target, guess)
+        result, possibilities, knowledge = make_guess(guess, target, possibilities, knowledge)
         solved = result == [GOOD] * len(target)
-        knowledge = new_knowledge(knowledge, guess, result)
-        possibilities = filter_possibilities(possibilities, knowledge)
     return guesses
 
 
 n_guesses = []
-for games in range(1000):
+for _ in range(1):
     target = random.choice(five_letter_words)
     guesses = solve(target)
-    print(guesses)
+    print(target, guesses)
     n_guesses.append(len(guesses))
 
 print(statistics.mean(n_guesses))
