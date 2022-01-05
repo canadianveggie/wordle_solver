@@ -3,6 +3,8 @@ import re
 import statistics
 import string
 
+WORD_LENGTH = 5
+
 five_letter_regex = re.compile(r'^[a-z]{5}$')  # Only match lower-case words
 five_letter_words = []
 with open('/usr/share/dict/words', 'r') as dictionary:
@@ -16,7 +18,7 @@ NOT_IN_WORD = 'X'
 
 
 class Knowledge(object):
-    def __init__(self, size=5):
+    def __init__(self, size=WORD_LENGTH):
         a_z = set(string.ascii_lowercase)
         self.letter_in_word = set()
         self.possible_letters = [a_z] * size
@@ -33,8 +35,8 @@ class Knowledge(object):
 
 def check_match(target, guess):
     result = []
-    for i in range(len(guess)):
-        other_letters = [target[x] for x in range(len(target)) if x != i]
+    for i in range(WORD_LENGTH):
+        other_letters = [target[x] for x in range(WORD_LENGTH) if x != i]
         if guess[i] == target[i]:
             result.append(GOOD)
         elif guess[i] in other_letters:
@@ -46,14 +48,14 @@ def check_match(target, guess):
 
 def new_knowledge(knowledge, guess, result):
     knowledge = knowledge.copy()
-    for i in range(len(guess)):
+    for i in range(WORD_LENGTH):
         guess_letter = guess[i]
         if result[i] == GOOD:
             knowledge.possible_letters[i] = set(guess_letter)
         elif result[i] == OTHER_POSITION:
             knowledge.letter_in_word.add(guess_letter)
         elif result[i] == NOT_IN_WORD:
-            for j in range(len(knowledge.possible_letters)):
+            for j in range(WORD_LENGTH):
                 knowledge.possible_letters[j] -= set(guess_letter)
     return knowledge
 
@@ -75,11 +77,12 @@ def filter_possibilities(possibilities, knowledge):
 def best_guess(possibilities, knowledge):
     best = ''
     best_reduction = float('inf')
-    for _ in range(min(len(possibilities), 1000)):
+    possible_guesses = random.sample(possibilities, min(len(possibilities), 100))
+    for guess in possible_guesses:
         guess = random.choice(possibilities)
 
         outcomes = []
-        possible_targets = random.sample(possibilities, min(len(possibilities), 1000))
+        possible_targets = random.sample(possibilities, min(len(possibilities), 100))
         for possible_target in possible_targets:
             _, new_possibilities, _ = make_guess(guess,
                                                  possible_target,
@@ -88,6 +91,7 @@ def best_guess(possibilities, knowledge):
             outcomes.append(len(new_possibilities))
         # TODO - better than mean
         mean_outcome = statistics.mean(outcomes) / len(possibilities)
+        print(guess, mean_outcome)
         if mean_outcome < best_reduction:
             best = guess
             best_reduction = mean_outcome
@@ -113,7 +117,7 @@ def solve(target):
         guess = best_guess(possibilities, knowledge)
         guesses.append(guess)
         result, possibilities, knowledge = make_guess(guess, target, possibilities, knowledge)
-        solved = result == [GOOD] * len(target)
+        solved = result == [GOOD] * WORD_LENGTH
     return guesses
 
 
