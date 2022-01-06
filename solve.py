@@ -106,10 +106,9 @@ def filter_possibilities(possibilities, knowledge):
 
 
 def best_guess(possibilities, knowledge):
-    if len(possibilities) > 100:
-        possible_guesses = good_starting_words
-    else:
-        possible_guesses = possibilities + good_starting_words
+    possible_guesses = filter_possibilities(good_starting_words, knowledge)
+    if len(possibilities) <= 100 or len(possible_guesses) == 0:
+        possible_guesses += random.sample(possibilities, min(len(possibilities), 100))
 
     best = ''
     best_reduction = float('inf')
