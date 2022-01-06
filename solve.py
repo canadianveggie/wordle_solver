@@ -8,10 +8,12 @@ from collections import defaultdict
 
 DEBUG = False
 WORD_LENGTH = 5
+# WORD_FILE = '/usr/share/dict/words'
+WORD_FILE = 'five_letter_words.txt'
 
-five_letter_regex = re.compile(r'^[a-z]{5}$')  # Only match lower-case words
+five_letter_regex = re.compile(r'^[A-Z]{5}$')  # Only match lower-case words
 five_letter_words = []
-with open('/usr/share/dict/words', 'r') as dictionary:
+with open(WORD_FILE, 'r') as dictionary:
     for word in dictionary:
         if five_letter_regex.match(word):
             five_letter_words.append(word.strip())
@@ -49,7 +51,7 @@ END_COLOUR = '\033[0m'
 
 class Knowledge(object):
     def __init__(self, size=WORD_LENGTH):
-        a_z = set(string.ascii_lowercase)
+        a_z = set(string.ascii_uppercase)
         self.letter_in_word = set()
         self.possible_letters = [a_z] * size
 
@@ -105,7 +107,10 @@ def filter_possibilities(possibilities, knowledge):
     return [p for p in possibilities if matches_knowledge(knowledge, p)]
 
 
-def best_guess(possibilities, knowledge):
+def best_guess(possibilities, knowledge, round):
+    if round == 1:
+        return random.choice(good_starting_words)
+
     possible_guesses = filter_possibilities(good_starting_words, knowledge)
     if len(possibilities) <= 100 or len(possible_guesses) == 0:
         possible_guesses += random.sample(possibilities, min(len(possibilities), 100))
@@ -146,10 +151,7 @@ def solve(target):
     solved = False
     while not solved:
         round += 1
-        if round == 1:
-            guess = random.choice(good_starting_words)
-        else:
-            guess = best_guess(possibilities, knowledge)
+        guess = best_guess(possibilities, knowledge, round)
         guesses.append(guess)
         result, possibilities, knowledge = make_guess(guess, target, possibilities, knowledge)
         if DEBUG:
@@ -158,14 +160,18 @@ def solve(target):
     return guesses
 
 
+def format_result(guess, result):
+    coloured_guess = ""
+    for i in range(WORD_LENGTH):
+        color = COLOURS[result[i]]
+        coloured_guess += f'{color}{guess[i]}{END_COLOUR}'
+    return coloured_guess
+
+
 def print_solution(target, guesses):
     for guess in guesses:
         result = check_match(target, guess)
-        coloured_guess = ""
-        for i in range(WORD_LENGTH):
-            color = COLOURS[result[i]]
-            coloured_guess += f'{color}{guess[i]}{END_COLOUR}'
-        print(coloured_guess)
+        print(format_result(guess, result))
 
 
 n_guesses = []
@@ -176,4 +182,5 @@ for _ in range(100):
     print()
     n_guesses.append(len(guesses))
 
-print(statistics.mean(n_guesses))
+if len(n_guesses) > 0:
+    print(statistics.mean(n_guesses))
