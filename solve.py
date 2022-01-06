@@ -6,6 +6,7 @@ import string
 
 from collections import defaultdict
 
+DEBUG = False
 WORD_LENGTH = 5
 
 five_letter_regex = re.compile(r'^[a-z]{5}$')  # Only match lower-case words
@@ -37,6 +38,13 @@ good_starting_words = determine_starting_words(five_letter_words)
 GOOD = 'G'
 OTHER_POSITION = 'O'
 NOT_IN_WORD = 'X'
+
+COLOURS = {
+    GOOD: '\033[92m',
+    OTHER_POSITION: '\033[93m',
+    NOT_IN_WORD: '\033[91m',
+}
+END_COLOUR = '\033[0m'
 
 
 class Knowledge(object):
@@ -145,16 +153,28 @@ def solve(target):
             guess = best_guess(possibilities, knowledge)
         guesses.append(guess)
         result, possibilities, knowledge = make_guess(guess, target, possibilities, knowledge)
-        print(guess, len(possibilities), possibilities[:10])
+        if DEBUG:
+            print(guess, len(possibilities), possibilities[:10])
         solved = result == [GOOD] * WORD_LENGTH
     return guesses
+
+
+def print_solution(target, guesses):
+    for guess in guesses:
+        result = check_match(target, guess)
+        coloured_guess = ""
+        for i in range(WORD_LENGTH):
+            color = COLOURS[result[i]]
+            coloured_guess += f'{color}{guess[i]}{END_COLOUR}'
+        print(coloured_guess)
 
 
 n_guesses = []
 for _ in range(100):
     target = random.choice(five_letter_words)
     guesses = solve(target)
-    print(guesses)
+    print_solution(target, guesses)
+    print()
     n_guesses.append(len(guesses))
 
 print(statistics.mean(n_guesses))
