@@ -1,7 +1,10 @@
+import heapq
 import random
 import re
 import statistics
 import string
+
+from collections import defaultdict
 
 WORD_LENGTH = 5
 
@@ -11,6 +14,25 @@ with open('/usr/share/dict/words', 'r') as dictionary:
     for word in dictionary:
         if five_letter_regex.match(word):
             five_letter_words.append(word.strip())
+
+
+def determine_starting_words(words):
+    letter_frequences = defaultdict(int)
+    for word in words:
+        for letter in word:
+            letter_frequences[letter] += 1
+    sorted_words_by_score = []
+    for word in words:
+        unique_letter_frequencies = 0
+        for letter in set(word):
+            unique_letter_frequencies += letter_frequences[letter]
+        heapq.heappush(sorted_words_by_score, (-unique_letter_frequencies, word))
+
+    best_words = [heapq.heappop(sorted_words_by_score)[1] for _ in range(100)]
+    return best_words
+
+
+good_starting_words = determine_starting_words(five_letter_words)
 
 GOOD = 'G'
 OTHER_POSITION = 'O'
@@ -53,6 +75,7 @@ def new_knowledge(knowledge, guess, result):
         if result[i] == GOOD:
             knowledge.possible_letters[i] = set(guess_letter)
         elif result[i] == OTHER_POSITION:
+            knowledge.possible_letters[i] -= set(guess_letter)
             knowledge.letter_in_word.add(guess_letter)
         elif result[i] == NOT_IN_WORD:
             for j in range(WORD_LENGTH):
@@ -75,12 +98,15 @@ def filter_possibilities(possibilities, knowledge):
 
 
 def best_guess(possibilities, knowledge):
+    if len(possibilities) > 100:
+        possible_guesses = good_starting_words
+    else:
+        possible_guesses = possibilities + good_starting_words
+
     best = ''
     best_reduction = float('inf')
-    possible_guesses = random.sample(possibilities, min(len(possibilities), 100))
-    for guess in possible_guesses:
-        guess = random.choice(possibilities)
 
+    for guess in possible_guesses:
         outcomes = []
         possible_targets = random.sample(possibilities, min(len(possibilities), 100))
         for possible_target in possible_targets:
@@ -91,7 +117,6 @@ def best_guess(possibilities, knowledge):
             outcomes.append(len(new_possibilities))
         # TODO - better than mean
         mean_outcome = statistics.mean(outcomes) / len(possibilities)
-        print(guess, mean_outcome)
         if mean_outcome < best_reduction:
             best = guess
             best_reduction = mean_outcome
@@ -114,18 +139,22 @@ def solve(target):
     solved = False
     while not solved:
         round += 1
-        guess = best_guess(possibilities, knowledge)
+        if round == 1:
+            guess = random.choice(good_starting_words)
+        else:
+            guess = best_guess(possibilities, knowledge)
         guesses.append(guess)
         result, possibilities, knowledge = make_guess(guess, target, possibilities, knowledge)
+        print(guess, len(possibilities), possibilities[:10])
         solved = result == [GOOD] * WORD_LENGTH
     return guesses
 
 
 n_guesses = []
-for _ in range(1):
+for _ in range(100):
     target = random.choice(five_letter_words)
     guesses = solve(target)
-    print(target, guesses)
+    print(guesses)
     n_guesses.append(len(guesses))
 
 print(statistics.mean(n_guesses))
