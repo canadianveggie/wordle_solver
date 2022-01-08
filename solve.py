@@ -11,12 +11,12 @@ WORD_LENGTH = 5
 # WORD_FILE = '/usr/share/dict/words'
 WORD_FILE = 'five_letter_words.txt'
 
-five_letter_regex = re.compile(r'^[A-Z]{5}$')  # Only match lower-case words
+five_letter_regex = re.compile(r'^[a-zA-Z]{5}$')  # Only match lower-case words
 five_letter_words = []
 with open(WORD_FILE, 'r') as dictionary:
     for word in dictionary:
         if five_letter_regex.match(word):
-            five_letter_words.append(word.strip())
+            five_letter_words.append(word.strip().upper())
 
 
 def determine_starting_words(words):
@@ -40,6 +40,7 @@ good_starting_words = determine_starting_words(five_letter_words)
 GOOD = 'G'
 OTHER_POSITION = 'O'
 NOT_IN_WORD = 'X'
+result_regex = re.compile(r'^[GOX]{5}$')
 
 COLOURS = {
     GOOD: '\033[92m',
@@ -107,8 +108,8 @@ def filter_possibilities(possibilities, knowledge):
     return [p for p in possibilities if matches_knowledge(knowledge, p)]
 
 
-def best_guess(possibilities, knowledge, round):
-    if round == 1:
+def best_guess(possibilities, knowledge, guess_number):
+    if guess_number == 1:
         return random.choice(good_starting_words)
 
     possible_guesses = filter_possibilities(good_starting_words, knowledge)
@@ -146,12 +147,12 @@ def make_guess(guess, target, possibilities, knowledge):
 def solve(target):
     possibilities = five_letter_words.copy()
     knowledge = Knowledge()
-    round = 0
+    guess_number = 0
     guesses = []
     solved = False
     while not solved:
-        round += 1
-        guess = best_guess(possibilities, knowledge, round)
+        guess_number += 1
+        guess = best_guess(possibilities, knowledge, guess_number)
         guesses.append(guess)
         result, possibilities, knowledge = make_guess(guess, target, possibilities, knowledge)
         if DEBUG:
@@ -174,13 +175,41 @@ def print_solution(target, guesses):
         print(format_result(guess, result))
 
 
-n_guesses = []
-for _ in range(100):
-    target = random.choice(five_letter_words)
-    guesses = solve(target)
-    print_solution(target, guesses)
-    print()
-    n_guesses.append(len(guesses))
+def test(loops=100):
+    n_guesses = []
+    for _ in range(loops):
+        target = random.choice(five_letter_words)
+        guesses = solve(target)
+        print_solution(target, guesses)
+        print()
+        n_guesses.append(len(guesses))
 
-if len(n_guesses) > 0:
-    print(statistics.mean(n_guesses))
+    if len(n_guesses) > 0:
+        print(statistics.mean(n_guesses))
+
+
+def guessing_game():
+    possibilities = five_letter_words.copy()
+    knowledge = Knowledge()
+    guess_number = 0
+    while True:
+        guess_number += 1
+        suggested_guess = best_guess(possibilities, knowledge, guess_number)
+        guess = ''
+        while not five_letter_regex.match(guess):
+            guess = input(f'Guess (try {suggested_guess}): ').upper() or suggested_guess
+        result = ''
+        while not result_regex.match(result):
+            result = input(f'Result ({COLOURS[GOOD]}{GOOD}{END_COLOUR}{COLOURS[OTHER_POSITION]}{OTHER_POSITION}{END_COLOUR}{COLOURS[NOT_IN_WORD]}{NOT_IN_WORD}{END_COLOUR}): ')
+        print(format_result(guess, result))
+        knowledge = new_knowledge(knowledge, guess, result)
+        possibilities = filter_possibilities(possibilities, knowledge)
+        if len(possibilities) == 0:
+            print('No known words match')
+            break
+        if len(possibilities) == 1:
+            print(format_result(possibilities[0], GOOD*5))
+            break
+
+
+guessing_game()
