@@ -90,7 +90,9 @@ def new_knowledge(knowledge, guess, result):
             knowledge.letter_in_word.add(guess_letter)
         elif result[i] == NOT_IN_WORD:
             for j in range(WORD_LENGTH):
-                knowledge.possible_letters[j] -= set(guess_letter)
+                # Special check for guessing the same letter twice and only one is found
+                if knowledge.possible_letters[j] != set(guess_letter):
+                    knowledge.possible_letters[j] -= set(guess_letter)
     return knowledge
 
 
@@ -196,7 +198,7 @@ def guessing_game():
         guess_number += 1
         suggested_guess = best_guess(possibilities, knowledge, guess_number)
         guess = ''
-        while not five_letter_regex.match(guess):
+        while guess not in five_letter_words:
             guess = input(f'Guess (try {suggested_guess}): ').upper() or suggested_guess
         result = ''
         while not result_regex.match(result):
@@ -212,4 +214,5 @@ def guessing_game():
             break
 
 
-guessing_game()
+if __name__ == '__main__':
+    guessing_game()
